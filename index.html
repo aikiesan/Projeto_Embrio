@@ -109,6 +109,8 @@ select{width:100%;padding:8px 10px;border:1px solid var(--border-color);backgrou
 .legend .sw{width:10px;height:10px;flex:none;border:1px solid rgba(0,0,0,.18)}
 .legend .nt{font-size:.62rem;color:var(--text-muted);margin-top:7px;line-height:1.45;border-top:1px solid var(--border-color);padding-top:6px}
 
+#grip{display:none}
+.laygrid{display:block}
 /* chips móveis */
 #chips{display:none;position:absolute;left:0;right:0;bottom:0;z-index:950;background:var(--bg-sidebar);
   border-top:1px solid var(--border-color);padding:8px 10px calc(8px + env(safe-area-inset-bottom));
@@ -137,20 +139,61 @@ dd{font-size:.76rem}
 .marker-cluster-tema span{line-height:34px}
 
 @media (max-width:880px){
-  .sidebar{position:absolute;top:0;left:0;width:90vw;min-width:0;max-width:400px}
-  .sidebar.collapsed{transform:translateX(-101%)}
+  html,body{overscroll-behavior:none}
   #wrap{width:100vw}
-  #chips{display:block}
-  #btnPanel{top:auto;bottom:calc(64px + env(safe-area-inset-bottom));left:12px;width:46px;height:46px}
-  .basemap{top:10px;left:10px;right:10px;justify-content:center}
+  #chips{display:none}
   .legend{display:none}
-  .leaflet-bottom.leaflet-right{bottom:60px}
+  .basemap{top:10px;left:10px;right:10px;justify-content:center;z-index:800}
+  #btnPanel{display:none}
+  .leaflet-bottom.leaflet-right{bottom:112px}
+  .leaflet-control-attribution{font-size:9px;max-width:62vw}
+
+  /* ---- gaveta inferior ---- */
+  .sidebar{position:fixed;left:0;right:0;bottom:0;top:auto;width:100%;min-width:0;max-width:none;
+    height:88dvh;border-right:0;border-top:1px solid var(--border-color);
+    box-shadow:0 -3px 18px rgba(72,52,34,.16);z-index:1200;
+    transition:transform .26s cubic-bezier(.32,.72,0,1);touch-action:none}
+  .sidebar.collapsed{transform:none}
+  .sidebar[data-snap="peek"]{transform:translateY(calc(88dvh - 104px))}
+  .sidebar[data-snap="half"]{transform:translateY(42dvh)}
+  .sidebar[data-snap="full"]{transform:translateY(0)}
+  .sidebar.dragging{transition:none}
+
+  #grip{display:flex;align-items:center;gap:10px;flex:none;padding:9px 18px 7px;cursor:grab;
+    border-bottom:1px solid var(--border-color);background:var(--bg-sidebar);position:relative}
+  #grip i{position:absolute;top:5px;left:50%;transform:translateX(-50%);width:40px;height:4px;
+    background:var(--border-color)}
+  #grip span{font-size:.74rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--text-muted);margin-top:6px}
+  .sb-head{display:none}
+  .tabs button{padding:11px 4px;font-size:.7rem}
+  .sb-body{padding:14px 16px 18px;touch-action:pan-y}
+  .sb-foot{padding:9px 16px}
+
+  /* ---- grade de camadas: dois toques por linha, rolagem só vertical ---- */
+  .laygrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:4px}
+  .laygrid .lay{margin-bottom:0;padding:10px 9px;align-items:center;min-height:52px}
+  .laygrid .lay .tx small{display:none}
+  .laygrid .lay .tx b{font-size:.74rem;line-height:1.25}
+  .laygrid .lay .bdg{margin-top:0;width:12px;height:12px}
+  .laygrid .lay .ct{font-size:.72rem}
+  .kpis{grid-template-columns:1fr 1fr 1fr 1fr;gap:5px}
+  .kpi{padding:7px 8px}
+  .kl{font-size:.55rem;letter-spacing:.04em}
+  .kv{font-size:1.02rem}
+  .hint{font-size:.7rem}
+}
+@media (max-width:339px){
+  .kpis{grid-template-columns:1fr 1fr}
+  .laygrid{grid-template-columns:1fr}
+  .laygrid .lay .tx small{display:block}
 }
 </style>
 </head>
 <body>
 <div class="app">
   <aside class="sidebar collapsed" id="sidebar">
+    <div id="grip"><i></i><span id="gripTxt">Camadas</span></div>
     <div class="sb-head">
       <div class="brand"><i class="fa-solid fa-dna"></i><span>Observatório · SP capital</span></div>
       <div class="brand-sub">Cadeia da reprodução assistida e do congelamento de oócitos — CNES × RAIS × SisEmbrio/Anvisa</div>
@@ -358,12 +401,12 @@ function render(){
       <div class="kpi"><div class="kl">Embriões congelados</div><div class="kv" id="kE">—</div></div>
       <div class="kpi"><div class="kl">No mapa</div><div class="kv" id="kM">—</div></div>
       <div class="kpi"><div class="kl">Centros de RHA</div><div class="kv" id="kR">—</div></div></div>
-      <div class="sec"><i class="fa-solid fa-diagram-project"></i> Elos da cadeia</div>`+
+      <div class="sec"><i class="fa-solid fa-diagram-project"></i> Elos da cadeia</div><div class="laygrid">`+
       ORD.map(k=>`<div class="lay ${ativos.has(k)?'on':''}" onclick="toggleCat('${k}')">
         <span class="bdg" style="background:${CSS(CAT[k].v)}"></span>
         <span class="tx"><b>${CAT[k].t}</b><small>${CAT[k].d}</small></span>
         <span class="ct">${filtrados.filter(d=>d.cat===k).length}</span></div>`).join('')+
-      `<div class="sec"><i class="fa-solid fa-layer-group"></i> Camadas de contexto</div>
+      `</div><div class="sec"><i class="fa-solid fa-layer-group"></i> Camadas de contexto</div><div class="laygrid">
       <div class="lay ${ctx.cluster?'on':''}" onclick="toggleCtx('cluster')"><span class="bdg" style="background:var(--primary)"></span>
         <span class="tx"><b>Agrupar em clusters</b><small>Junta pontos próximos; desligue para ver cada endereço</small></span></div>
       <div class="lay ${ctx.heat?'on':''}" onclick="toggleCtx('heat')"><span class="bdg" style="background:#c07a3e"></span>
@@ -371,17 +414,17 @@ function render(){
       <div class="lay ${ctx.dist?'on':''}" onclick="toggleCtx('dist')"><span class="bdg" style="background:var(--primary);opacity:.5"></span>
         <span class="tx"><b>Distritos de São Paulo</b><small>96 distritos tingidos pelo número de elos mapeados</small></span></div>
       <div class="lay ${ctx.buffer?'on':''}" onclick="toggleCtx('buffer')"><span class="bdg line" style="background:var(--cat-ancora)"></span>
-        <span class="tx"><b>Raio de 1 km das âncoras</b><small>Área de influência dos centros regulados</small></span></div>
+        <span class="tx"><b>Raio de 1 km das âncoras</b><small>Área de influência dos centros regulados</small></span></div></div>
       <div class="sec"><i class="fa-solid fa-tags"></i> Camadas temáticas por palavra-chave</div>
       <div class="hint">Varredura dos 29.477 estabelecimentos ativos do CNES na capital por termos ligados à cadeia — 1.529 estabelecimentos em 12 camadas, desligadas por padrão. São pistas de afinidade, não confirmação de serviço.</div>
       <div style="display:flex;gap:7px;margin-bottom:8px">
         <button class="btn" onclick="event.stopPropagation();todosTemas(true)"><i class="fa-solid fa-eye"></i> Ligar todas</button>
-        <button class="btn" onclick="event.stopPropagation();todosTemas(false)"><i class="fa-solid fa-eye-slash"></i> Desligar</button></div>`+
+        <button class="btn" onclick="event.stopPropagation();todosTemas(false)"><i class="fa-solid fa-eye-slash"></i> Desligar</button></div><div class="laygrid">`+
       TORD.map(k=>{const n=contaTema(k);
         return `<div class="lay ${temasOn.has(k)?'on':''}" onclick="toggleTema('${k}')">
         <span class="bdg" style="background:${TEMA[k].c}"></span>
         <span class="tx"><b>${TEMA[k].t}</b><small>${TEMA[k].d}</small></span>
-        <span class="ct">${n==null?TEMA[k].n:n}</span></div>`;}).join('')+`
+        <span class="ct">${n==null?TEMA[k].n:n}</span></div>`;}).join('')+`</div>
       <div class="sec"><i class="fa-solid fa-shield-halved"></i> Força da evidência</div>
       <select id="ev" onchange="EV=this.value;filtrar()">
         <option value="ALL">Todos os registros</option>
@@ -404,7 +447,7 @@ function render(){
     q.oninput=()=>{Q=q.value;filtrar();};
     b.querySelectorAll('.row[data-i]').forEach(el=>el.onclick=()=>{
       const d=filtrados[+el.dataset.i];map.setView([d.la,d.lo],17);
-      if(window.innerWidth<=880)togglePanel();
+      if(isMob())setSnap('peek');
       L.popup({maxWidth:320}).setLatLng([d.la,d.lo]).setContent(popupHTML(d)).openOn(map);});
   } else if(aba==='territorio'){
     const c=Object.entries(D.distritos||{}).filter(([k,v])=>k&&k!=='null'&&v).sort((a,b)=>b[1]-a[1]);
@@ -432,11 +475,61 @@ function render(){
 
 document.querySelectorAll('.tabs button').forEach(bt=>bt.onclick=()=>{
   document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===bt));
-  aba=bt.dataset.t;render();});
-function togglePanel(){const s=document.getElementById('sidebar');s.classList.toggle('collapsed');
-  document.getElementById('ic').className=s.classList.contains('collapsed')?'fa-solid fa-sliders':'fa-solid fa-xmark';
-  setTimeout(()=>map.invalidateSize(),300);}
-
+  aba=bt.dataset.t;render();if(isMob()&&snap==='peek')setSnap('half');else if(isMob())setSnap(snap);});
+const isMob=()=>window.innerWidth<=880;
+const SN=['peek','half','full'];
+let snap='peek';
+function setSnap(v){
+  snap=v; const el=document.getElementById('sidebar');
+  el.style.transform=''; el.dataset.snap=v; el.classList.remove('collapsed');
+  const rot={camadas:'Camadas',lista:'Lista',territorio:'Território',metodo:'Método'}[aba]||'Camadas';
+  document.getElementById('gripTxt').textContent = v==='peek' ? rot+' · arraste para abrir' : rot;
+  setTimeout(()=>map.invalidateSize(),290);
+}
+function togglePanel(){
+  const el=document.getElementById('sidebar');
+  if(isMob()){setSnap(snap==='full'?'peek':'full');return;}
+  el.classList.toggle('collapsed');
+  const i=document.getElementById('ic');
+  if(i)i.className=el.classList.contains('collapsed')?'fa-solid fa-sliders':'fa-solid fa-xmark';
+  setTimeout(()=>map.invalidateSize(),300);
+}
+(function(){
+  const grip=document.getElementById('grip');
+  let y0=0,t0=0,arrast=false,moveu=0;
+  const alturas=()=>{const el=document.getElementById('sidebar');
+    const h=el.offsetHeight, base=window.innerHeight-h;
+    return {h,base,alvos:{full:0,half:Math.round(window.innerHeight*0.42),peek:Math.max(0,h-104)}};};
+  const tAtual=()=>{const el=document.getElementById('sidebar');
+    const {base}=alturas(); return el.getBoundingClientRect().top-base;};
+  grip.addEventListener('pointerdown',e=>{
+    if(!isMob())return;
+    arrast=true; moveu=0; y0=e.clientY; t0=tAtual();
+    const el=document.getElementById('sidebar'); el.classList.add('dragging');
+    try{grip.setPointerCapture(e.pointerId)}catch(_){}
+  });
+  grip.addEventListener('pointermove',e=>{
+    if(!arrast)return;
+    const d=e.clientY-y0; moveu=Math.max(moveu,Math.abs(d));
+    const {alvos}=alturas();
+    const t=Math.min(alvos.peek,Math.max(0,t0+d));
+    document.getElementById('sidebar').style.transform='translateY('+t+'px)';
+  });
+  const soltar=()=>{
+    if(!arrast)return; arrast=false;
+    const el=document.getElementById('sidebar'); el.classList.remove('dragging');
+    const {alvos}=alturas();
+    if(moveu<8){ setSnap(SN[(SN.indexOf(snap)+1)%SN.length]); return; }
+    const t=tAtual();
+    let melhor='peek',dist=1e9;
+    for(const k in alvos){const d=Math.abs(alvos[k]-t); if(d<dist){dist=d;melhor=k;}}
+    setSnap(melhor);
+  };
+  grip.addEventListener('pointerup',soltar);
+  grip.addEventListener('pointercancel',soltar);
+  window.addEventListener('resize',()=>{if(isMob())setSnap(snap);else{
+    const el=document.getElementById('sidebar');el.style.transform='';el.removeAttribute('data-snap');}});
+})();
 function baixar(n,t,m){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:m}));a.download=n;a.click();}
 function exportCSV(){
   const cols=['n','rs','cat','tp','en','di','ce','cn','cj','tl','la','lo','g','r7','r14','sis','emb','st','kw'];
@@ -455,8 +548,9 @@ Promise.all([fetch('data/sp_capital.json').then(r=>r.json()),
   filtrar();render();
   carregarTemas();
   if(D.pontos.length)map.fitBounds(L.latLngBounds(D.pontos.map(d=>[d.la,d.lo])),{padding:[40,40]});
-  if(window.innerWidth>880)document.getElementById('sidebar').classList.remove('collapsed');
-  document.getElementById('ic').className=document.getElementById('sidebar').classList.contains('collapsed')?'fa-solid fa-sliders':'fa-solid fa-xmark';
+  const el=document.getElementById('sidebar'); el.classList.remove('collapsed');
+  if(isMob())setSnap('peek'); else el.removeAttribute('data-snap');
+  const ic=document.getElementById('ic'); if(ic)ic.className='fa-solid fa-xmark';
 });
 </script>
 </body>
