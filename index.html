@@ -240,17 +240,17 @@ const CAT={
  '7_candidato_rais':{v:'--cat-rais',t:'Candidatos RAIS não identificados',s:'RAIS',d:'CEP com CNAE 8630-5/07 ou 8640-2/14 sem correspondente no CNES'}};
 const ORD=Object.keys(CAT);
 const TEMA={
- rha:{n:31,c:'#b5533a',t:'Reprodução humana assistida',d:'reprodução humana/assistida, medicina reprodutiva, FIV'},
+ rha:{n:30,c:'#b5533a',t:'Reprodução humana assistida',d:'reprodução humana/assistida, medicina reprodutiva, FIV'},
  fert:{n:16,c:'#c98a4b',t:'Fertilidade e infertilidade',d:'fertilidade, fertilização, infertilidade'},
  embrio:{n:5,c:'#8d6b3f',t:'Embriologia',d:'embriologia, embrião, blastocisto'},
  crio:{n:6,c:'#6f7f5e',t:'Criopreservação e bancos',d:'criopreservação, criogenia, banco de sêmen/células, gametas, oócitos, cordão umbilical'},
- genetica:{n:39,c:'#7a6a8a',t:'Genética e genômica',d:'genética, genômica, citogenética, cariótipo — triagem embrionária'},
+ genetica:{n:38,c:'#7a6a8a',t:'Genética e genômica',d:'genética, genômica, citogenética, cariótipo — triagem embrionária'},
  fetal:{n:11,c:'#b07b8a',t:'Medicina fetal e pré-natal',d:'medicina fetal, pré-natal — destino da gestação'},
- ginobs:{n:297,c:'#a4795f',t:'Ginecologia e obstetrícia',d:'ginecologia, obstetrícia, saúde da mulher — porta de entrada'},
- androl:{n:238,c:'#6b7f8c',t:'Andrologia e urologia',d:'andrologia, urologia, fator masculino'},
- endocrino:{n:64,c:'#8a8f5a',t:'Endocrinologia',d:'endocrinologia, tratamento hormonal — estimulação ovariana'},
- lab:{n:820,c:'#98917f',t:'Laboratórios e diagnóstico',d:'laboratório, análises clínicas, patologia, citologia, diagnóstico'},
- matern:{n:41,c:'#c0906a',t:'Maternidades e parto',d:'maternidade, parto, materno-infantil'},
+ ginobs:{n:288,c:'#a4795f',t:'Ginecologia e obstetrícia',d:'ginecologia, obstetrícia, saúde da mulher — porta de entrada'},
+ androl:{n:231,c:'#6b7f8c',t:'Andrologia e urologia',d:'andrologia, urologia, fator masculino'},
+ endocrino:{n:61,c:'#8a8f5a',t:'Endocrinologia',d:'endocrinologia, tratamento hormonal — estimulação ovariana'},
+ lab:{n:785,c:'#98917f',t:'Laboratórios e diagnóstico',d:'laboratório, análises clínicas, patologia, citologia, diagnóstico'},
+ matern:{n:40,c:'#c0906a',t:'Maternidades e parto',d:'maternidade, parto, materno-infantil'},
  transp:{n:5,c:'#7b6a5d',t:'Transporte e logística',d:'transporte, logística — elo quase invisível nas bases'}};
 const TORD=['rha','fert','embrio','crio','genetica','fetal','endocrino','androl','ginobs','lab','matern','transp'];
 const temasOn=new Set();
@@ -416,7 +416,7 @@ function render(){
       <div class="lay ${ctx.buffer?'on':''}" onclick="toggleCtx('buffer')"><span class="bdg line" style="background:var(--cat-ancora)"></span>
         <span class="tx"><b>Raio de 1 km das âncoras</b><small>Área de influência dos centros regulados</small></span></div></div>
       <div class="sec"><i class="fa-solid fa-tags"></i> Camadas temáticas por palavra-chave</div>
-      <div class="hint">Varredura dos 29.477 estabelecimentos ativos do CNES na capital por termos ligados à cadeia — 1.529 estabelecimentos em 12 camadas, desligadas por padrão. São pistas de afinidade, não confirmação de serviço.</div>
+      <div class="hint">Varredura dos 29.477 estabelecimentos ativos do CNES na capital por termos ligados à cadeia — 1.472 estabelecimentos em 12 camadas, desligadas por padrão. São pistas de afinidade, não confirmação de serviço.</div>
       <div style="display:flex;gap:7px;margin-bottom:8px">
         <button class="btn" onclick="event.stopPropagation();todosTemas(true)"><i class="fa-solid fa-eye"></i> Ligar todas</button>
         <button class="btn" onclick="event.stopPropagation();todosTemas(false)"><i class="fa-solid fa-eye-slash"></i> Desligar</button></div><div class="laygrid">`+
@@ -465,6 +465,8 @@ function render(){
     <div class="hint">Centros que declararam ao SisEmbrio/Anvisa produção e congelamento de embriões na capital. É o único elo com registro nacional de armazenamento; os demais são inferidos. A conciliação com o CNES foi feita por razão social e CEP e cada ponto informa como foi conciliado.</div>
     <div class="sec"><i class="fa-solid fa-diagram-project"></i> Por que separar os elos</div>
     <div class="hint">Congelar um óvulo envolve coleta, vitrificação, armazenamento criogênico, transporte e destino — funções que podem estar em CNPJs e endereços distintos. Mapear só as âncoras esconde a cadeia; fundir tudo em “clínica” inventa uma unidade que não existe.</div>
+    <div class="sec"><i class="fa-solid fa-location-crosshairs"></i> Validação das coordenadas</div>
+    <div class="hint">Toda coordenada do CNES é conferida contra o polígono do município de São Paulo. O cadastro tem erros: 1 elo da cadeia e 57 estabelecimentos temáticos traziam coordenada fora da capital, às vezes a dezenas de quilômetros do endereço declarado. Esses registros saem do mapa e vão para a lista sem geocodificação precisa, com endereço e CEP preservados.</div>
     <div class="sec"><i class="fa-solid fa-triangle-exclamation"></i> Limites</div>
     <div class="hint">O CNES registra serviço cadastrado, não produção. A RAIS registra atividade econômica e vínculos formais, não procedimentos. Em São Paulo capital um CEP pode cobrir um trecho inteiro de avenida: coincidência de CEP sozinha não confirma vínculo e por isso é camada própria.</div>
     <div class="hint">O transporte de gametas e embriões não aparece em nenhuma das bases — depende de empresa regularizada na vigilância sanitária local, a levantar por pedido formal.</div>
