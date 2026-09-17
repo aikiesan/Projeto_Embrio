@@ -103,8 +103,8 @@ const COR={A:getComputedStyle(document.documentElement).getPropertyValue('--a').
            C:getComputedStyle(document.documentElement).getPropertyValue('--c').trim(),
            D:getComputedStyle(document.documentElement).getPropertyValue('--d').trim()};
 const map=L.map('map',{zoomControl:true}).setView([-15.6,-52.0],4);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
-  attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:19}).addTo(map);
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+  {attribution:'Tiles &copy; Esri — HERE, Garmin, &copy; OpenStreetMap contributors',maxZoom:19,maxNativeZoom:16}).addTo(map);
 const cluster=L.markerClusterGroup({maxClusterRadius:45,disableClusteringAtZoom:12});
 map.addLayer(cluster);
 let DADOS=[],marcadores=[];

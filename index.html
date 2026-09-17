@@ -172,11 +172,9 @@ dd{font-size:.76rem}
     <button class="fab" id="btnPanel" onclick="togglePanel()" title="Painel"><i class="fa-solid fa-sliders" id="ic"></i></button>
     <div class="basemap"><i class="fa-solid fa-map"></i>
       <select id="bmSel" onchange="setBase(this.value)">
-        <option value="voyager">CartoDB Voyager</option>
-        <option value="positron">CartoDB Positron (claro)</option>
-        <option value="dark">CartoDB Dark Matter</option>
+        <option value="esri_gray">Esri Light Gray (minimalista)</option>
         <option value="osm">OpenStreetMap</option>
-        <option value="esri_gray">Esri Light Gray</option>
+        <option value="esri_street">Esri Ruas</option>
         <option value="esri_topo">Esri Topográfico</option>
         <option value="esri_sat">Esri Satélite</option>
         <option value="opentopo">OpenTopoMap</option>
@@ -222,16 +220,15 @@ let Q='',EV='ALL',DI='ALL';
 const map=L.map('map',{zoomControl:false}).setView([-23.57,-46.65],12);
 L.control.zoom({position:'bottomright'}).addTo(map);
 const BASES={
- voyager:['https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png','&copy; OpenStreetMap &copy; CARTO',['a','b','c','d']],
- positron:['https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png','&copy; OpenStreetMap &copy; CARTO',['a','b','c','d']],
- dark:['https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png','&copy; OpenStreetMap &copy; CARTO',['a','b','c','d']],
- osm:['https://tile.openstreetmap.org/{z}/{x}/{y}.png','&copy; OpenStreetMap',null],
- esri_sat:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}','Esri, Maxar, Earthstar Geographics',null],
- esri_topo:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}','Esri, HERE, Garmin, OpenStreetMap',null],
- esri_gray:['https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}','Esri, HERE, Garmin',null],
- opentopo:['https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png','&copy; OpenTopoMap (CC-BY-SA), &copy; OpenStreetMap',['a','b','c']]};
-const mkBase=k=>{const b=BASES[k];const o={attribution:b[1],maxZoom:19};if(b[2])o.subdomains=b[2];return L.tileLayer(b[0],o);};
-let base=mkBase('voyager').addTo(map);
+ esri_gray:['https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}','Tiles &copy; Esri — HERE, Garmin, &copy; OpenStreetMap contributors',null,16],
+ osm:['https://tile.openstreetmap.org/{z}/{x}/{y}.png','&copy; OpenStreetMap contributors',null,19],
+ esri_street:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}','Tiles &copy; Esri — HERE, Garmin, USGS, &copy; OpenStreetMap contributors',null,19],
+ esri_topo:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}','Tiles &copy; Esri — HERE, Garmin, USGS, &copy; OpenStreetMap contributors',null,19],
+ esri_sat:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}','Tiles &copy; Esri — Maxar, Earthstar Geographics',null,19],
+ opentopo:['https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png','&copy; OpenTopoMap (CC-BY-SA), &copy; OpenStreetMap contributors',['a','b','c'],17]};
+const mkBase=k=>{const b=BASES[k];const o={attribution:b[1],maxZoom:19,maxNativeZoom:b[3]};
+  if(b[2])o.subdomains=b[2];return L.tileLayer(b[0],o);};
+let base=mkBase('esri_gray').addTo(map);
 function setBase(k){map.removeLayer(base);base=mkBase(k).addTo(map);base.bringToBack();}
 
 const cluster=L.markerClusterGroup({maxClusterRadius:48,disableClusteringAtZoom:16,spiderfyOnMaxZoom:true});
@@ -429,7 +426,7 @@ function render(){
     <div class="hint">O CNES registra serviço cadastrado, não produção. A RAIS registra atividade econômica e vínculos formais, não procedimentos. Em São Paulo capital um CEP pode cobrir um trecho inteiro de avenida: coincidência de CEP sozinha não confirma vínculo e por isso é camada própria.</div>
     <div class="hint">O transporte de gametas e embriões não aparece em nenhuma das bases — depende de empresa regularizada na vigilância sanitária local, a levantar por pedido formal.</div>
     <div class="sec"><i class="fa-solid fa-database"></i> Fontes</div>
-    <div class="hint">CNES/DataSUS, estabelecimentos, agosto de 2026 · RAIS/ESTAB, CNAE 8630-5/07 e 8640-2/14 · SisEmbrio/Anvisa, CRHAs de São Paulo capital, 2025 · Distritos: codigourbano/distritos-sp · CEP: BrasilAPI.</div>`;
+    <div class="hint">CNES/DataSUS, estabelecimentos, agosto de 2026 · RAIS/ESTAB, CNAE 8630-5/07 e 8640-2/14 · SisEmbrio/Anvisa, CRHAs de São Paulo capital, 2025 · Distritos: codigourbano/distritos-sp · CEP: BrasilAPI · Mapas base: Esri, OpenStreetMap e OpenTopoMap, sem chave de API.</div>`;
   }
 }
 
