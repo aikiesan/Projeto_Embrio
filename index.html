@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Observatório da Reprodução Assistida — São Paulo capital</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"/>
+<style>
+:root{
+  --bg-body:#efe8dd; --bg-sidebar:#faf6f0; --bg-card:#f0e7da; --bg-card-hover:#e6dac9;
+  --border-color:#ddcfbc; --text-main:#2f2823; --text-muted:#7d6f62;
+  --primary:#9c4a2f;
+  --cat-ancora:#9c4a2f; --cat-banco:#7d6a3a; --cat-centro:#c07a3e;
+  --cat-lab:#6e7f6a; --cat-consult:#a98a6b; --cat-rais:#9b9188;
+  --shadow:0 2px 12px rgba(72,52,34,.10);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg-body:#1d1916; --bg-sidebar:#26211d; --bg-card:#2f2823; --bg-card-hover:#3a312a;
+    --border-color:#413730; --text-main:#f0e7da; --text-muted:#a8998a; --primary:#d4805f;
+    --cat-ancora:#d4805f; --cat-banco:#bda767; --cat-centro:#e0a469;
+    --cat-lab:#9ab093; --cat-consult:#c9ae90; --cat-rais:#8d8278;
+    --shadow:0 2px 12px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Plus Jakarta Sans',system-ui,sans-serif;
+  background:var(--bg-body);color:var(--text-main)}
+.app{display:flex;width:100vw;height:100dvh;position:relative}
+
+/* ============ PAINEL ============ */
+.sidebar{width:400px;min-width:400px;height:100dvh;background:var(--bg-sidebar);border-right:1px solid var(--border-color);
+  display:flex;flex-direction:column;z-index:1200;box-shadow:3px 0 14px rgba(72,52,34,.07);transition:transform .28s ease}
+.sidebar.collapsed{transform:translateX(-400px);position:absolute}
+.sb-head{padding:16px 20px 12px;border-top:0;border-bottom:1px solid var(--border-color);flex:none;padding-top:max(16px,env(safe-area-inset-top))}
+.brand{display:flex;align-items:center;gap:9px;font-size:1rem;font-weight:800;letter-spacing:-.01em}
+.brand i{color:var(--primary)}
+.brand-sub{font-size:.71rem;color:var(--text-muted);margin-top:4px;line-height:1.45}
+.tabs{display:flex;border-bottom:1px solid var(--border-color);flex:none}
+.tabs button{flex:1;padding:10px 4px;background:var(--bg-sidebar);border:0;border-right:1px solid var(--border-color);
+  font:inherit;font-size:.72rem;font-weight:700;color:var(--text-muted);cursor:pointer}
+.tabs button:last-child{border-right:0}
+.tabs button.on{background:var(--primary);color:#faf6f0}
+.sb-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 20px;overscroll-behavior:contain}
+.sb-foot{flex:none;padding:10px 20px;border-top:1px solid var(--border-color);display:flex;gap:8px;
+  padding-bottom:max(10px,env(safe-area-inset-bottom))}
+
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:16px}
+.kpi{background:var(--bg-card);border:1px solid var(--border-color);padding:9px 11px}
+.kpi.hi{background:var(--primary);border-color:var(--primary)}
+.kpi.hi .kl,.kpi.hi .kv{color:#faf6f0}
+.kl{font-size:.63rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);font-weight:700}
+.kv{font-family:'JetBrains Mono',monospace;font-size:1.26rem;font-weight:700;margin-top:2px;line-height:1.1}
+
+.sec{font-size:.66rem;text-transform:uppercase;letter-spacing:.07em;font-weight:800;color:var(--text-muted);
+  margin:16px 0 8px;display:flex;align-items:center;gap:7px}
+.sec:first-child{margin-top:0}
+.search{position:relative;margin-bottom:14px}
+.search i{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:.78rem}
+.search input{width:100%;padding:9px 10px 9px 31px;border:1px solid var(--border-color);background:var(--bg-body);
+  color:var(--text-main);font:inherit;font-size:.82rem}
+select{width:100%;padding:8px 10px;border:1px solid var(--border-color);background:var(--bg-body);color:var(--text-main);
+  font:inherit;font-size:.8rem;margin-bottom:8px}
+
+.lay{display:flex;align-items:flex-start;gap:9px;padding:9px 10px;margin-bottom:5px;cursor:pointer;
+  background:var(--bg-card);border:1px solid var(--border-color);opacity:.4;transition:opacity .15s,background .15s}
+.lay.on{opacity:1}
+.lay:hover{background:var(--bg-card-hover)}
+.bdg{width:11px;height:11px;flex:none;margin-top:3px;border:1px solid rgba(0,0,0,.18)}
+.bdg.line{height:3px;margin-top:7px}
+.lay .tx{flex:1;min-width:0}
+.lay .tx b{display:block;font-size:.78rem;font-weight:700;line-height:1.3}
+.lay .tx small{display:block;font-size:.67rem;color:var(--text-muted);line-height:1.4;margin-top:2px}
+.lay .ct{font-family:'JetBrains Mono',monospace;font-size:.75rem;font-weight:700;color:var(--text-muted);flex:none}
+
+.btn{flex:1;padding:9px 6px;background:var(--bg-card);border:1px solid var(--border-color);color:var(--text-main);
+  font:inherit;font-size:.71rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn:hover{background:var(--primary);color:#faf6f0;border-color:var(--primary)}
+.hint{font-size:.68rem;color:var(--text-muted);line-height:1.55;border-left:2px solid var(--border-color);padding-left:10px;margin:8px 0}
+.row{padding:9px 0;border-bottom:1px solid var(--border-color);cursor:pointer;display:flex;gap:9px;align-items:flex-start}
+.row .bdg{margin-top:4px}
+.row b{font-size:.78rem;font-weight:700;display:block;line-height:1.3}
+.row small{font-size:.68rem;color:var(--text-muted);display:block;margin-top:1px}
+.bar{height:5px;background:var(--bg-card);margin-top:3px}
+.bar i{display:block;height:100%;background:var(--primary)}
+
+/* ============ MAPA ============ */
+#wrap{flex:1;position:relative;height:100dvh}
+#map{width:100%;height:100%;background:var(--bg-body)}
+.fab{position:absolute;z-index:900;background:var(--bg-sidebar);border:1px solid var(--border-color);
+  color:var(--text-main);cursor:pointer;box-shadow:var(--shadow);width:40px;height:40px;font-size:.92rem}
+#btnPanel{top:12px;left:12px}
+.basemap{position:absolute;top:12px;right:12px;z-index:900;background:var(--bg-sidebar);border:1px solid var(--border-color);
+  padding:5px 9px;display:flex;align-items:center;gap:7px;font-size:.71rem;font-weight:700;box-shadow:var(--shadow);color:var(--text-muted)}
+.basemap select{width:auto;border:0;background:transparent;margin:0;padding:0;font-size:.71rem;font-weight:700}
+.legend{position:absolute;bottom:16px;right:12px;z-index:900;background:var(--bg-sidebar);border:1px solid var(--border-color);
+  padding:10px 12px;box-shadow:var(--shadow);max-width:250px}
+.legend .lt{font-weight:800;margin-bottom:6px;text-transform:uppercase;font-size:.63rem;letter-spacing:.06em;color:var(--text-muted)}
+.legend div.it{display:flex;align-items:center;gap:7px;font-size:.7rem;padding:2px 0}
+.legend .sw{width:10px;height:10px;flex:none;border:1px solid rgba(0,0,0,.18)}
+.legend .nt{font-size:.62rem;color:var(--text-muted);margin-top:7px;line-height:1.45;border-top:1px solid var(--border-color);padding-top:6px}
+
+/* chips móveis */
+#chips{display:none;position:absolute;left:0;right:0;bottom:0;z-index:950;background:var(--bg-sidebar);
+  border-top:1px solid var(--border-color);padding:8px 10px calc(8px + env(safe-area-inset-bottom));
+  overflow-x:auto;white-space:nowrap;box-shadow:0 -2px 12px rgba(72,52,34,.12)}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:7px 11px;margin-right:6px;border:1px solid var(--border-color);
+  background:var(--bg-card);font-size:.74rem;font-weight:700;color:var(--text-muted);opacity:.5}
+.chip.on{opacity:1;color:var(--text-main)}
+.chip .bdg{margin:0}
+.chip.act{background:var(--primary);color:#faf6f0;border-color:var(--primary);opacity:1}
+
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{border-radius:0;background:var(--bg-sidebar);color:var(--text-main);box-shadow:var(--shadow)}
+.leaflet-popup-content{margin:13px 15px;font-size:.8rem;line-height:1.5;max-height:50vh;overflow-y:auto}
+.pt{font-weight:800;font-size:.87rem;line-height:1.3;margin-bottom:5px}
+.tag{display:inline-block;font-size:.61rem;font-weight:700;padding:2px 6px;border:1px solid var(--border-color);
+  color:var(--text-muted);margin:0 4px 4px 0;text-transform:uppercase;letter-spacing:.03em}
+.tag.solid{background:var(--primary);color:#faf6f0;border-color:var(--primary)}
+dl{display:grid;grid-template-columns:auto 1fr;gap:2px 11px}
+dt{font-size:.61rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);font-weight:700;padding-top:2px}
+dd{font-size:.76rem}
+.marker-cluster{background:rgba(156,74,47,.2)}
+.marker-cluster div{background:rgba(156,74,47,.85);color:#faf6f0;font-family:'JetBrains Mono',monospace;font-weight:700}
+.marker-cluster span{line-height:30px}
+.marker-cluster-tema{background:rgba(125,111,98,.18)}
+.marker-cluster-tema div{background:rgba(125,111,98,.8);color:#faf6f0;width:34px;height:34px;
+  font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.72rem;text-align:center}
+.marker-cluster-tema span{line-height:34px}
+
+@media (max-width:880px){
+  .sidebar{position:absolute;top:0;left:0;width:90vw;min-width:0;max-width:400px}
+  .sidebar.collapsed{transform:translateX(-101%)}
+  #wrap{width:100vw}
+  #chips{display:block}
+  #btnPanel{top:auto;bottom:calc(64px + env(safe-area-inset-bottom));left:12px;width:46px;height:46px}
+  .basemap{top:10px;left:10px;right:10px;justify-content:center}
+  .legend{display:none}
+  .leaflet-bottom.leaflet-right{bottom:60px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar collapsed" id="sidebar">
+    <div class="sb-head">
+      <div class="brand"><i class="fa-solid fa-dna"></i><span>Observatório · SP capital</span></div>
+      <div class="brand-sub">Cadeia da reprodução assistida e do congelamento de oócitos — CNES × RAIS × SisEmbrio/Anvisa</div>
+    </div>
+    <div class="tabs">
+      <button data-t="camadas" class="on">Camadas</button>
+      <button data-t="lista">Lista</button>
+      <button data-t="territorio">Território</button>
+      <button data-t="metodo">Método</button>
+    </div>
+    <div class="sb-body" id="body"></div>
+    <div class="sb-foot">
+      <button class="btn" onclick="exportCSV()"><i class="fa-solid fa-file-csv"></i> CSV</button>
+      <button class="btn" onclick="exportGeoJSON()"><i class="fa-solid fa-file-code"></i> GeoJSON</button>
+    </div>
+  </aside>
+
+  <div id="wrap">
+    <button class="fab" id="btnPanel" onclick="togglePanel()" title="Painel"><i class="fa-solid fa-sliders" id="ic"></i></button>
+    <div class="basemap"><i class="fa-solid fa-map"></i>
+      <select id="bmSel" onchange="setBase(this.value)">
+        <option value="voyager">CartoDB Voyager</option>
+        <option value="positron">CartoDB Positron (claro)</option>
+        <option value="dark">CartoDB Dark Matter</option>
+        <option value="osm">OpenStreetMap</option>
+        <option value="esri_gray">Esri Light Gray</option>
+        <option value="esri_topo">Esri Topográfico</option>
+        <option value="esri_sat">Esri Satélite</option>
+        <option value="opentopo">OpenTopoMap</option>
+      </select></div>
+    <div id="map"></div>
+    <div class="legend"><div class="lt">Elos da cadeia</div><div id="leg"></div>
+      <div class="nt">Cheio: endereço CNES. Tracejado: centro do CEP. O raio cresce com os embriões congelados. Pontos pequenos: camadas temáticas por palavra-chave.</div></div>
+    <div id="chips"></div>
+  </div>
+</div>
+
+<script>
+const CSS=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const CAT={
+ '1_ancora_sisembrio':{v:'--cat-ancora',t:'Âncoras — CRHA/BCTG regulados',s:'Âncoras',d:'Reportaram produção e congelamento de embriões ao SisEmbrio/Anvisa'},
+ '3_banco_criopreservacao':{v:'--cat-banco',t:'Bancos e criopreservação',s:'Bancos',d:'Banco de sêmen, gametas, embriologia ou criopreservação no nome CNES'},
+ '2_centro_rha':{v:'--cat-centro',t:'Centros de reprodução assistida',s:'Centros',d:'Nome CNES declara RHA, sem reporte próprio ao SisEmbrio'},
+ '4_laboratorio_apoio':{v:'--cat-lab',t:'Laboratórios e apoio diagnóstico',s:'Labs',d:'SADT no mesmo CEP de um elo da cadeia'},
+ '6_consultorio_fertilidade':{v:'--cat-consult',t:'Consultórios de fertilidade',s:'Consultórios',d:'Termo de fertilidade no nome, sem evidência de laboratório'},
+ '7_candidato_rais':{v:'--cat-rais',t:'Candidatos RAIS não identificados',s:'RAIS',d:'CEP com CNAE 8630-5/07 ou 8640-2/14 sem correspondente no CNES'}};
+const ORD=Object.keys(CAT);
+const TEMA={
+ rha:{n:31,c:'#b5533a',t:'Reprodução humana assistida',d:'reprodução humana/assistida, medicina reprodutiva, FIV'},
+ fert:{n:16,c:'#c98a4b',t:'Fertilidade e infertilidade',d:'fertilidade, fertilização, infertilidade'},
+ embrio:{n:5,c:'#8d6b3f',t:'Embriologia',d:'embriologia, embrião, blastocisto'},
+ crio:{n:6,c:'#6f7f5e',t:'Criopreservação e bancos',d:'criopreservação, criogenia, banco de sêmen/células, gametas, oócitos, cordão umbilical'},
+ genetica:{n:39,c:'#7a6a8a',t:'Genética e genômica',d:'genética, genômica, citogenética, cariótipo — triagem embrionária'},
+ fetal:{n:11,c:'#b07b8a',t:'Medicina fetal e pré-natal',d:'medicina fetal, pré-natal — destino da gestação'},
+ ginobs:{n:297,c:'#a4795f',t:'Ginecologia e obstetrícia',d:'ginecologia, obstetrícia, saúde da mulher — porta de entrada'},
+ androl:{n:238,c:'#6b7f8c',t:'Andrologia e urologia',d:'andrologia, urologia, fator masculino'},
+ endocrino:{n:64,c:'#8a8f5a',t:'Endocrinologia',d:'endocrinologia, tratamento hormonal — estimulação ovariana'},
+ lab:{n:820,c:'#98917f',t:'Laboratórios e diagnóstico',d:'laboratório, análises clínicas, patologia, citologia, diagnóstico'},
+ matern:{n:41,c:'#c0906a',t:'Maternidades e parto',d:'maternidade, parto, materno-infantil'},
+ transp:{n:5,c:'#7b6a5d',t:'Transporte e logística',d:'transporte, logística — elo quase invisível nas bases'}};
+const TORD=['rha','fert','embrio','crio','genetica','fetal','endocrino','androl','ginobs','lab','matern','transp'];
+const temasOn=new Set();
+let TEMAS=null,temasCarregando=false;
+const ativos=new Set(ORD);
+const ctx={heat:false,dist:false,buffer:false,cluster:true};
+let D={pontos:[],sem_geo:[],distritos:{}},GEO=null,filtrados=[],aba='camadas';
+let Q='',EV='ALL',DI='ALL';
+
+const map=L.map('map',{zoomControl:false}).setView([-23.57,-46.65],12);
+L.control.zoom({position:'bottomright'}).addTo(map);
+const BASES={
+ voyager:['https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png','&copy; OpenStreetMap &copy; CARTO',['a','b','c','d']],
+ positron:['https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png','&copy; OpenStreetMap &copy; CARTO',['a','b','c','d']],
+ dark:['https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png','&copy; OpenStreetMap &copy; CARTO',['a','b','c','d']],
+ osm:['https://tile.openstreetmap.org/{z}/{x}/{y}.png','&copy; OpenStreetMap',null],
+ esri_sat:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}','Esri, Maxar, Earthstar Geographics',null],
+ esri_topo:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}','Esri, HERE, Garmin, OpenStreetMap',null],
+ esri_gray:['https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}','Esri, HERE, Garmin',null],
+ opentopo:['https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png','&copy; OpenTopoMap (CC-BY-SA), &copy; OpenStreetMap',['a','b','c']]};
+const mkBase=k=>{const b=BASES[k];const o={attribution:b[1],maxZoom:19};if(b[2])o.subdomains=b[2];return L.tileLayer(b[0],o);};
+let base=mkBase('voyager').addTo(map);
+function setBase(k){map.removeLayer(base);base=mkBase(k).addTo(map);base.bringToBack();}
+
+const cluster=L.markerClusterGroup({maxClusterRadius:48,disableClusteringAtZoom:16,spiderfyOnMaxZoom:true});
+const temaCluster=L.markerClusterGroup({maxClusterRadius:60,disableClusteringAtZoom:17,spiderfyOnMaxZoom:true,
+  iconCreateFunction:c=>L.divIcon({html:'<div><span>'+c.getChildCount()+'</span></div>',
+    className:'marker-cluster marker-cluster-tema',iconSize:[34,34]})});
+const pts=L.layerGroup(), bufs=L.layerGroup();
+let heat=null, distLayer=null;
+const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=n=>n.toLocaleString('pt-BR');
+
+function popupHTML(d){
+  const li=(k,v)=>v?`<dt>${k}</dt><dd>${esc(v)}</dd>`:'';
+  const st={confirmado:'razão social conciliada CNES × SisEmbrio',
+    complexo_institucional:'unidade em complexo institucional — confirmar unidade exata',
+    revisar:'conciliação por CEP apenas — revisar',nao_localizado_cnes:'não localizada no CNES'}[d.st];
+  return `<div class="pt">${esc(d.n)}</div>
+  <div><span class="tag solid">${CAT[d.cat].s}</span>${d.sis?'<span class="tag">SisEmbrio</span>':''}
+  ${d.r7?'<span class="tag">CNAE 8630-5/07</span>':''}${d.r14?'<span class="tag">BCTG 8640-2/14</span>':''}</div>
+  <dl>${li('Razão social',d.rs&&d.rs!==d.n?d.rs:'')}${li('Endereço',d.en)}${li('Distrito',d.di)}${li('CEP',d.ce)}
+  ${li('Tipo CNES',d.tp&&d.tp!=='—'?d.tp:'')}${li('CNES',d.cn)}${li('CNPJ',d.cj)}${li('Telefone',d.tl)}
+  ${d.emb!=null?`<dt>Embriões</dt><dd>${fmt(d.emb)} congelados (SisEmbrio 2025)</dd>`:''}
+  ${li('Conciliação',st)}${li('Termos',d.kw)}
+  <dt>Precisão</dt><dd>${d.g==='cnes'?'endereço declarado no CNES':'centro do CEP'}</dd></dl>`;
+}
+function popupTema(r,ts){
+  const li=(k,v)=>v?`<dt>${k}</dt><dd>${esc(v)}</dd>`:'';
+  return `<div class="pt">${esc(r.n)}</div><div>${r.t.map(t=>
+    `<span class="tag" style="border-color:${TEMA[t].c};color:${TEMA[t].c}">${TEMA[t].t}</span>`).join('')}</div>
+  <dl>${li('Razão social',r.rs&&r.rs!==r.n?r.rs:'')}${li('Endereço',r.en)}${li('Distrito',r.di)}${li('CEP',r.ce)}
+  ${li('Tipo CNES',r.tp)}${li('CNES',r.cn)}${li('CNPJ',r.cj)}</dl>
+  <div style="font-size:.66rem;color:var(--text-muted);margin-top:7px;line-height:1.45">
+  Camada temática: seleção por palavra-chave no nome CNES. Indica afinidade com a cadeia, não oferta confirmada de congelamento de óvulos.</div>`;}
+const raio=d=>d.emb?Math.min(24,7+Math.sqrt(d.emb)/7):(d.cat==='1_ancora_sisembrio'?9:d.cat==='7_candidato_rais'?5:7);
+
+function filtrar(){
+  const q=Q.trim().toLowerCase(), ev=EV, di=DI;
+  filtrados=D.pontos.filter(d=>{
+    if(!ativos.has(d.cat))return false;
+    if(di!=='ALL'&&d.di!==di)return false;
+    if(ev==='SIS'&&!d.sis)return false;
+    if(ev==='RAIS'&&!(d.r7||d.r14))return false;
+    if(ev==='CNES'&&d.g!=='cnes')return false;
+    if(q&&!((d.n||'')+' '+(d.rs||'')+' '+(d.en||'')+' '+(d.di||'')+' '+(d.ce||'')+' '+(d.cj||'')).toLowerCase().includes(q))return false;
+    return true;});
+  desenhar();
+}
+function desenhar(){
+  cluster.clearLayers();pts.clearLayers();bufs.clearLayers();
+  const ms=filtrados.map(d=>{const c=CSS(CAT[d.cat].v);
+    return L.circleMarker([d.la,d.lo],{radius:raio(d),color:c,weight:d.g==='cnes'?2:1.5,fillColor:c,
+      fillOpacity:d.g==='cnes'?.5:.16,dashArray:d.g==='cnes'?null:'2 3'}).bindPopup(popupHTML(d),{maxWidth:320});});
+  if(ctx.cluster){ms.forEach(m=>cluster.addLayer(m));if(!map.hasLayer(cluster))map.addLayer(cluster);if(map.hasLayer(pts))map.removeLayer(pts);}
+  else{ms.forEach(m=>pts.addLayer(m));if(!map.hasLayer(pts))map.addLayer(pts);if(map.hasLayer(cluster))map.removeLayer(cluster);}
+  if(heat){map.removeLayer(heat);heat=null;}
+  if(ctx.heat)heat=L.heatLayer(filtrados.map(d=>[d.la,d.lo,d.emb?Math.min(1,.3+d.emb/6000):.45]),
+    {radius:34,blur:26,maxZoom:15,gradient:{.2:'#c9ae90',.45:'#c07a3e',.7:'#9c4a2f',1:'#6d2f1c'}}).addTo(map);
+  if(ctx.buffer){filtrados.filter(d=>d.cat==='1_ancora_sisembrio').forEach(d=>
+    L.circle([d.la,d.lo],{radius:1000,color:CSS('--cat-ancora'),weight:1,fillOpacity:.05,dashArray:'4 4'}).addTo(bufs));
+    if(!map.hasLayer(bufs))map.addLayer(bufs);}
+  else if(map.hasLayer(bufs))map.removeLayer(bufs);
+  temaCluster.clearLayers();
+  if(temasOn.size&&TEMAS){
+    const vistos=new Set();
+    TEMAS.forEach(r=>{
+      const ts=r.t.filter(t=>temasOn.has(t)); if(!ts.length)return;
+      const k=r.cn||r.n+r.ce; if(vistos.has(k))return; vistos.add(k);
+      const cor=TEMA[ts[0]].c;
+      temaCluster.addLayer(L.circleMarker([r.la,r.lo],{radius:4.5,color:cor,weight:1.2,fillColor:cor,fillOpacity:.45})
+        .bindPopup(popupTema(r,ts),{maxWidth:300}));
+    });
+    if(!map.hasLayer(temaCluster))map.addLayer(temaCluster);
+  } else if(map.hasLayer(temaCluster))map.removeLayer(temaCluster);
+  if(distLayer){map.removeLayer(distLayer);distLayer=null;}
+  if(ctx.dist&&GEO){
+    const mx=Math.max(...Object.values(D.distritos||{0:1}).filter(Number.isFinite),1);
+    distLayer=L.geoJSON(GEO,{style:f=>{const n=D.distritos[f.properties.d]||0;
+      return{color:CSS('--border-color'),weight:.8,fillColor:CSS('--primary'),fillOpacity:n?.10+.55*(n/mx):.02};},
+      onEachFeature:(f,l)=>{const n=D.distritos[f.properties.d]||0;
+        l.bindPopup(`<div class="pt">${esc(f.properties.d)}</div><dl><dt>Elos mapeados</dt><dd>${n}</dd></dl>`);}}).addTo(map);
+    distLayer.bringToBack();base.bringToBack();
+  }
+  atualizarKPIs();
+  if(aba==='camadas'||aba==='lista'||aba==='territorio')render();
+  renderChips();
+}
+function atualizarKPIs(){
+  const K=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  K('kA',D.pontos.filter(d=>d.cat==='1_ancora_sisembrio').length+D.sem_geo.filter(d=>d.cat==='1_ancora_sisembrio').length);
+  K('kM',filtrados.length);
+  K('kR',D.pontos.filter(d=>d.cat==='2_centro_rha').length);
+  const e=[...D.pontos,...D.sem_geo].reduce((s,d)=>s+(d.emb||0),0);
+  K('kE',e>=1000?(e/1000).toFixed(1).replace('.',',')+'k':e);
+}
+function renderChips(){
+  document.getElementById('chips').innerHTML=
+    `<span class="chip ${ctx.cluster?'act':''}" onclick="ctx.cluster=!ctx.cluster;desenhar()"><i class="fa-solid fa-circle-dot"></i> Cluster</span>`+
+    `<span class="chip ${ctx.heat?'act':''}" onclick="ctx.heat=!ctx.heat;desenhar()"><i class="fa-solid fa-fire"></i> Densidade</span>`+
+    `<span class="chip ${ctx.dist?'act':''}" onclick="ctx.dist=!ctx.dist;desenhar()"><i class="fa-solid fa-draw-polygon"></i> Distritos</span>`+
+    ORD.map(k=>`<span class="chip ${ativos.has(k)?'on':''}" onclick="toggleCat('${k}')">
+      <i class="bdg" style="background:${CSS(CAT[k].v)}"></i>${CAT[k].s} <b>${filtrados.filter(d=>d.cat===k).length}</b></span>`).join('')+
+    `<span class="chip" style="opacity:.35;pointer-events:none">temas ›</span>`+
+    TORD.map(k=>`<span class="chip ${temasOn.has(k)?'on':''}" onclick="toggleTema('${k}')">
+      <i class="bdg" style="background:${TEMA[k].c}"></i>${TEMA[k].t.split(' e ')[0].split(' por ')[0]}</span>`).join('');
+}
+function toggleCat(k){ativos.has(k)?ativos.delete(k):ativos.add(k);filtrar();}
+function toggleCtx(k){ctx[k]=!ctx[k];desenhar();}
+function toggleTema(k){
+  temasOn.has(k)?temasOn.delete(k):temasOn.add(k);
+  carregarTemas();
+  desenhar();render();
+}
+const contaTema=k=>TEMAS?TEMAS.filter(r=>r.t.includes(k)).length:null;
+function carregarTemas(){
+  if(TEMAS||temasCarregando)return Promise.resolve();
+  temasCarregando=true;
+  return (window.__TEMAS__?Promise.resolve(window.__TEMAS__):fetch('data/temas_sp.json').then(r=>r.json()))
+    .then(j=>{TEMAS=j;temasCarregando=false;desenhar();if(aba==='camadas')render();})
+    .catch(()=>{temasCarregando=false;});}
+function todosTemas(lig){lig?TORD.forEach(k=>temasOn.add(k)):temasOn.clear();carregarTemas();desenhar();render();}
+
+function render(){
+  const b=document.getElementById('body');
+  if(aba==='camadas'){
+    b.innerHTML=`<div class="kpis">
+      <div class="kpi hi"><div class="kl">Âncoras reguladas</div><div class="kv" id="kA">—</div></div>
+      <div class="kpi"><div class="kl">Embriões congelados</div><div class="kv" id="kE">—</div></div>
+      <div class="kpi"><div class="kl">No mapa</div><div class="kv" id="kM">—</div></div>
+      <div class="kpi"><div class="kl">Centros de RHA</div><div class="kv" id="kR">—</div></div></div>
+      <div class="sec"><i class="fa-solid fa-diagram-project"></i> Elos da cadeia</div>`+
+      ORD.map(k=>`<div class="lay ${ativos.has(k)?'on':''}" onclick="toggleCat('${k}')">
+        <span class="bdg" style="background:${CSS(CAT[k].v)}"></span>
+        <span class="tx"><b>${CAT[k].t}</b><small>${CAT[k].d}</small></span>
+        <span class="ct">${filtrados.filter(d=>d.cat===k).length}</span></div>`).join('')+
+      `<div class="sec"><i class="fa-solid fa-layer-group"></i> Camadas de contexto</div>
+      <div class="lay ${ctx.cluster?'on':''}" onclick="toggleCtx('cluster')"><span class="bdg" style="background:var(--primary)"></span>
+        <span class="tx"><b>Agrupar em clusters</b><small>Junta pontos próximos; desligue para ver cada endereço</small></span></div>
+      <div class="lay ${ctx.heat?'on':''}" onclick="toggleCtx('heat')"><span class="bdg" style="background:#c07a3e"></span>
+        <span class="tx"><b>Densidade</b><small>Mapa de calor ponderado pelos embriões congelados</small></span></div>
+      <div class="lay ${ctx.dist?'on':''}" onclick="toggleCtx('dist')"><span class="bdg" style="background:var(--primary);opacity:.5"></span>
+        <span class="tx"><b>Distritos de São Paulo</b><small>96 distritos tingidos pelo número de elos mapeados</small></span></div>
+      <div class="lay ${ctx.buffer?'on':''}" onclick="toggleCtx('buffer')"><span class="bdg line" style="background:var(--cat-ancora)"></span>
+        <span class="tx"><b>Raio de 1 km das âncoras</b><small>Área de influência dos centros regulados</small></span></div>
+      <div class="sec"><i class="fa-solid fa-tags"></i> Camadas temáticas por palavra-chave</div>
+      <div class="hint">Varredura dos 29.477 estabelecimentos ativos do CNES na capital por termos ligados à cadeia — 1.529 estabelecimentos em 12 camadas, desligadas por padrão. São pistas de afinidade, não confirmação de serviço.</div>
+      <div style="display:flex;gap:7px;margin-bottom:8px">
+        <button class="btn" onclick="event.stopPropagation();todosTemas(true)"><i class="fa-solid fa-eye"></i> Ligar todas</button>
+        <button class="btn" onclick="event.stopPropagation();todosTemas(false)"><i class="fa-solid fa-eye-slash"></i> Desligar</button></div>`+
+      TORD.map(k=>{const n=contaTema(k);
+        return `<div class="lay ${temasOn.has(k)?'on':''}" onclick="toggleTema('${k}')">
+        <span class="bdg" style="background:${TEMA[k].c}"></span>
+        <span class="tx"><b>${TEMA[k].t}</b><small>${TEMA[k].d}</small></span>
+        <span class="ct">${n==null?TEMA[k].n:n}</span></div>`;}).join('')+`
+      <div class="sec"><i class="fa-solid fa-shield-halved"></i> Força da evidência</div>
+      <select id="ev" onchange="EV=this.value;filtrar()">
+        <option value="ALL">Todos os registros</option>
+        <option value="SIS">Somente âncoras do SisEmbrio/Anvisa</option>
+        <option value="RAIS">Com CNAE 8630-5/07 ou 8640-2/14 na RAIS</option>
+        <option value="CNES">Somente com coordenada de endereço CNES</option></select>
+      <div class="sec"><i class="fa-solid fa-circle-question"></i> Sem geocodificação precisa (${D.sem_geo.length})</div>`+
+      D.sem_geo.map(d=>`<div class="row"><span class="bdg" style="background:${CSS(CAT[d.cat].v)}"></span>
+        <span><b>${esc(d.n)}</b><small>${esc(d.en||'—')} · CEP ${d.ce}</small></span></div>`).join('')+
+      `<div class="hint">CEPs que só devolvem o centro do município. Logradouro e bairro são reais; a coordenada não seria — ficam fora do mapa de propósito.</div>`;
+    const ev=document.getElementById('ev'); if(ev)ev.value=EV; atualizarKPIs();
+  } else if(aba==='lista'){
+    b.innerHTML=`<div class="search"><i class="fa-solid fa-magnifying-glass"></i>
+      <input id="q" placeholder="Buscar nome, endereço, distrito, CEP ou CNPJ…" value="${esc(Q)}"></div>`+
+      (filtrados.length?filtrados.map((d,i)=>`<div class="row" data-i="${i}">
+        <span class="bdg" style="background:${CSS(CAT[d.cat].v)}"></span>
+        <span><b>${esc(d.n)}</b><small>${esc(d.di||d.en||'')}${d.emb!=null?' · '+fmt(d.emb)+' embriões':''}</small></span></div>`).join('')
+        :'<div class="hint">Nenhum registro com os filtros atuais.</div>');
+    const q=document.getElementById('q');
+    q.oninput=()=>{Q=q.value;filtrar();};
+    b.querySelectorAll('.row[data-i]').forEach(el=>el.onclick=()=>{
+      const d=filtrados[+el.dataset.i];map.setView([d.la,d.lo],17);
+      if(window.innerWidth<=880)togglePanel();
+      L.popup({maxWidth:320}).setLatLng([d.la,d.lo]).setContent(popupHTML(d)).openOn(map);});
+  } else if(aba==='territorio'){
+    const c=Object.entries(D.distritos||{}).filter(([k,v])=>k&&k!=='null'&&v).sort((a,b)=>b[1]-a[1]);
+    const mx=c.length?c[0][1]:1;
+    b.innerHTML=`<div class="sec"><i class="fa-solid fa-city"></i> Filtrar por distrito</div>
+      <select id="di" onchange="DI=this.value;filtrar()"><option value="ALL">Todos os distritos</option>
+      ${c.map(([k])=>`<option ${DI===k?'selected':''}>${k}</option>`).join('')}</select>
+      <div class="sec"><i class="fa-solid fa-ranking-star"></i> Concentração por distrito</div>`+
+      c.map(([k,v])=>`<div class="row" onclick="DI='${k}';filtrar();">
+        <span style="flex:1"><b>${k}</b><small>${v} ${v===1?'elo':'elos'}</small>
+        <span class="bar"><i style="width:${100*v/mx}%"></i></span></span></div>`).join('')+
+      `<div class="hint">A concentração no quadrante sudoeste — Moema, Vila Mariana, Itaim Bibi, Jardim Paulista — é o achado territorial mais nítido e vale ser lido junto a renda e planos de saúde.</div>`;
+  } else {
+    b.innerHTML=`<div class="sec"><i class="fa-solid fa-anchor"></i> O que é uma âncora</div>
+    <div class="hint">Centros que declararam ao SisEmbrio/Anvisa produção e congelamento de embriões na capital. É o único elo com registro nacional de armazenamento; os demais são inferidos. A conciliação com o CNES foi feita por razão social e CEP e cada ponto informa como foi conciliado.</div>
+    <div class="sec"><i class="fa-solid fa-diagram-project"></i> Por que separar os elos</div>
+    <div class="hint">Congelar um óvulo envolve coleta, vitrificação, armazenamento criogênico, transporte e destino — funções que podem estar em CNPJs e endereços distintos. Mapear só as âncoras esconde a cadeia; fundir tudo em “clínica” inventa uma unidade que não existe.</div>
+    <div class="sec"><i class="fa-solid fa-triangle-exclamation"></i> Limites</div>
+    <div class="hint">O CNES registra serviço cadastrado, não produção. A RAIS registra atividade econômica e vínculos formais, não procedimentos. Em São Paulo capital um CEP pode cobrir um trecho inteiro de avenida: coincidência de CEP sozinha não confirma vínculo e por isso é camada própria.</div>
+    <div class="hint">O transporte de gametas e embriões não aparece em nenhuma das bases — depende de empresa regularizada na vigilância sanitária local, a levantar por pedido formal.</div>
+    <div class="sec"><i class="fa-solid fa-database"></i> Fontes</div>
+    <div class="hint">CNES/DataSUS, estabelecimentos, agosto de 2026 · RAIS/ESTAB, CNAE 8630-5/07 e 8640-2/14 · SisEmbrio/Anvisa, CRHAs de São Paulo capital, 2025 · Distritos: codigourbano/distritos-sp · CEP: BrasilAPI.</div>`;
+  }
+}
+
+document.querySelectorAll('.tabs button').forEach(bt=>bt.onclick=()=>{
+  document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===bt));
+  aba=bt.dataset.t;render();});
+function togglePanel(){const s=document.getElementById('sidebar');s.classList.toggle('collapsed');
+  document.getElementById('ic').className=s.classList.contains('collapsed')?'fa-solid fa-sliders':'fa-solid fa-xmark';
+  setTimeout(()=>map.invalidateSize(),300);}
+
+function baixar(n,t,m){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:m}));a.download=n;a.click();}
+function exportCSV(){
+  const cols=['n','rs','cat','tp','en','di','ce','cn','cj','tl','la','lo','g','r7','r14','sis','emb','st','kw'];
+  const cab=['nome','razao_social','elo_cadeia','tipo_cnes','endereco','distrito','cep','cnes','cnpj','telefone','lat','lon','precisao','cnae_8630507','cnae_8640214','sisembrio','embrioes_congelados','conciliacao','termos'];
+  const e=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  baixar('sp_capital_reproducao_assistida.csv','﻿'+[cab.join(';'),...filtrados.map(d=>cols.map(c=>e(d[c])).join(';'))].join('\n'),'text/csv');}
+function exportGeoJSON(){baixar('sp_capital_reproducao_assistida.geojson',JSON.stringify({type:'FeatureCollection',
+  features:filtrados.map(d=>({type:'Feature',geometry:{type:'Point',coordinates:[d.lo,d.la]},
+  properties:Object.fromEntries(Object.entries(d).filter(([k])=>k!=='la'&&k!=='lo'))}))},null,1),'application/geo+json');}
+
+Promise.all([fetch('data/sp_capital.json').then(r=>r.json()),
+             fetch('data/distritos_sp.json').then(r=>r.json()).catch(()=>null)]).then(([j,g])=>{
+  D=j;GEO=g;
+  document.getElementById('leg').innerHTML=ORD.map(k=>
+    `<div class="it"><span class="sw" style="background:${CSS(CAT[k].v)}"></span>${CAT[k].s}</div>`).join('');
+  filtrar();render();
+  carregarTemas();
+  if(D.pontos.length)map.fitBounds(L.latLngBounds(D.pontos.map(d=>[d.la,d.lo])),{padding:[40,40]});
+  if(window.innerWidth>880)document.getElementById('sidebar').classList.remove('collapsed');
+  document.getElementById('ic').className=document.getElementById('sidebar').classList.contains('collapsed')?'fa-solid fa-sliders':'fa-solid fa-xmark';
+});
+</script>
+</body>
+</html>

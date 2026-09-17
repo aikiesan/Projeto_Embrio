@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projeto Embrio — WebGIS da reprodução humana assistida no Brasil</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --ink:#1b1f24; --muted:#5b6672; --line:#e2e6ea;
+  --a:#7b2d8e; --b:#c2185b; --c:#1f77a8; --d:#8d99a6; --accent:#0f6d5b;
+}
+:root:not([data-theme="light"]){}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14171a; --panel:#1c2024; --ink:#e8ecef; --muted:#9aa5b1; --line:#2b3238;
+    --a:#c98fd8; --b:#f06292; --c:#5fb3e0; --d:#7d8894; --accent:#4bbfa4;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 "Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+#app{display:grid;grid-template-columns:360px 1fr;height:100vh}
+#side{background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:20px 18px 40px}
+#map{height:100vh}
+h1{font-size:19px;margin:0 0 4px;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:13px;margin:0 0 18px}
+h2{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:22px 0 8px;font-weight:600}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kpi{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.kpi b{display:block;font-size:22px;line-height:1.1;font-variant-numeric:tabular-nums}
+.kpi span{font-size:11px;color:var(--muted)}
+label.chk{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;cursor:pointer}
+.dot{width:11px;height:11px;border-radius:50%;flex:none}
+select,input[type=search]{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--ink);font:inherit;font-size:13px}
+.legend p{margin:4px 0;font-size:12.5px;color:var(--muted)}
+.note{font-size:12px;color:var(--muted);border-left:3px solid var(--line);padding:2px 0 2px 10px;margin:8px 0}
+#list{margin-top:8px;border-top:1px solid var(--line)}
+.item{padding:9px 2px;border-bottom:1px solid var(--line);cursor:pointer}
+.item:hover{background:var(--bg)}
+.item b{font-size:13px;font-weight:600;display:block}
+.item span{font-size:11.5px;color:var(--muted)}
+.tag{display:inline-block;font-size:10px;padding:1px 6px;border-radius:99px;border:1px solid var(--line);margin-right:4px;vertical-align:1px}
+.leaflet-popup-content{font:13px/1.45 system-ui,sans-serif;margin:12px 14px}
+.leaflet-popup-content h3{margin:0 0 6px;font-size:14px}
+.leaflet-popup-content dl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:8px 0 0}
+.leaflet-popup-content dt{color:#5b6672;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.leaflet-popup-content dd{margin:0;font-size:12.5px}
+footer{margin-top:24px;font-size:11.5px;color:var(--muted)}
+footer a{color:var(--accent)}
+@media (max-width:860px){#app{grid-template-columns:1fr;grid-template-rows:auto 65vh}#map{height:65vh}#side{border-right:0;border-bottom:1px solid var(--line);max-height:35vh}}
+</style>
+</head>
+<body>
+<div id="app">
+<aside id="side">
+  <h1>Reprodução humana assistida no Brasil</h1>
+  <p class="sub">Estabelecimentos com evidência de FIV, criopreservação de oócitos e bancos de células germinativas — CNES × RAIS × SisEmbrio/Anvisa.</p>
+
+  <div class="kpis">
+    <div class="kpi"><b id="k1">—</b><span>estabelecimentos no mapa</span></div>
+    <div class="kpi"><b id="k2">—</b><span>classe A + B</span></div>
+    <div class="kpi"><b id="k3">—</b><span>UFs cobertas</span></div>
+    <div class="kpi"><b id="k4">—</b><span>CRHAs SisEmbrio (SP)</span></div>
+  </div>
+
+  <h2>Grau de confiança</h2>
+  <label class="chk"><input type="checkbox" data-c="A" checked><span class="dot" style="background:var(--a)"></span> A — confirmada (SisEmbrio + registro)</label>
+  <label class="chk"><input type="checkbox" data-c="B" checked><span class="dot" style="background:var(--b)"></span> B — muito provável</label>
+  <label class="chk"><input type="checkbox" data-c="C" checked><span class="dot" style="background:var(--c)"></span> C — provável (nome CNES)</label>
+  <label class="chk"><input type="checkbox" data-c="D"><span class="dot" style="background:var(--d)"></span> D — não confirmada</label>
+
+  <h2>Filtros</h2>
+  <select id="uf"><option value="">Todas as UFs</option></select>
+  <div style="height:8px"></div>
+  <input type="search" id="q" placeholder="Buscar nome, município ou CNPJ…">
+  <div style="height:8px"></div>
+  <label class="chk"><input type="checkbox" id="onlySis"> Somente CRHAs do SisEmbrio</label>
+  <label class="chk"><input type="checkbox" id="onlyRais"> Somente com CNAE 8630-5/07 ou 8640-2/14 no CEP</label>
+
+  <h2>Resultados <span id="cnt" style="color:var(--muted);font-weight:400"></span></h2>
+  <div id="list"></div>
+
+  <h2>Como ler este mapa</h2>
+  <p class="note">Ponto = estabelecimento de saúde ativo no CNES cujo nome contém termos de reprodução assistida, criopreservação ou bancos germinativos. As coordenadas vêm do endereço declarado no CNES; pontos marcados como <i>CEP aproximado</i> são CRHAs do SisEmbrio sem correspondência no CNES e caem no centroide do CEP.</p>
+  <p class="note">A classe de confiança combina três sinais independentes: presença na lista de CRHAs do SisEmbrio/Anvisa, presença da CNAE 8630-5/07 ou 8640-2/14 da RAIS no mesmo CEP, e força das palavras-chave no nome CNES. Nenhum ponto significa, por si só, que a unidade realiza congelamento de óvulos — isso exige confirmação sanitária.</p>
+
+  <footer>
+    Fontes: CNES/DataSUS (estabelecimentos, ago/2026) · RAIS/ESTAB (CNAE 8630-5/07 e 8640-2/14) · SisEmbrio/Anvisa (CRHAs, embriões congelados, SP capital) · IBGE (municípios).<br><br>
+    Projeto Embrio · pesquisa em andamento · dados abertos.
+  </footer>
+</aside>
+<div id="map"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+const COR={A:getComputedStyle(document.documentElement).getPropertyValue('--a').trim(),
+           B:getComputedStyle(document.documentElement).getPropertyValue('--b').trim(),
+           C:getComputedStyle(document.documentElement).getPropertyValue('--c').trim(),
+           D:getComputedStyle(document.documentElement).getPropertyValue('--d').trim()};
+const map=L.map('map',{zoomControl:true}).setView([-15.6,-52.0],4);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
+  attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:19}).addTo(map);
+const cluster=L.markerClusterGroup({maxClusterRadius:45,disableClusteringAtZoom:12});
+map.addLayer(cluster);
+let DADOS=[],marcadores=[];
+const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function popup(d){
+  const linha=(k,v)=>v?`<dt>${k}</dt><dd>${esc(v)}</dd>`:'';
+  return `<h3>${esc(d.n)}</h3>
+  <div><span class="tag">classe ${d.c}</span>${d.sis?'<span class="tag">SisEmbrio</span>':''}${d.r7?'<span class="tag">CNAE 8630-5/07</span>':''}${d.r14?'<span class="tag">BCTG 8640-2/14</span>':''}</div>
+  <dl>
+  ${linha('Razão social',d.rs!==d.n?d.rs:'')}
+  ${linha('Município',d.mu+' — '+d.uf)}
+  ${linha('Endereço',d.en)}
+  ${linha('CEP',d.ce)}
+  ${linha('CNES',d.cn)}
+  ${linha('CNPJ',d.cj)}
+  ${linha('Telefone',d.tl)}
+  ${d.emb!=null?`<dt>Embriões congelados</dt><dd>${d.emb.toLocaleString('pt-BR')} (SisEmbrio)</dd>`:''}
+  ${linha('Termos no nome',d.kw.replace(/\|/g,', ').toLowerCase())}
+  ${linha('Geolocalização',d.g==='cnes_endereco'?'endereço CNES':'CEP aproximado')}
+  </dl>`;
+}
+
+function desenhar(){
+  const cls=new Set([...document.querySelectorAll('[data-c]')].filter(i=>i.checked).map(i=>i.dataset.c));
+  const uf=document.getElementById('uf').value;
+  const q=document.getElementById('q').value.trim().toLowerCase();
+  const onlySis=document.getElementById('onlySis').checked;
+  const onlyRais=document.getElementById('onlyRais').checked;
+  const f=DADOS.filter(d=>cls.has(d.c)&&(!uf||d.uf===uf)&&(!onlySis||d.sis)&&(!onlyRais||d.r7||d.r14)
+    &&(!q||(d.n+' '+d.rs+' '+d.mu+' '+(d.cj||'')).toLowerCase().includes(q)));
+  cluster.clearLayers(); marcadores=[];
+  f.forEach(d=>{
+    const raio=d.emb?Math.min(16,6+Math.sqrt(d.emb)/9):(d.c==='A'?9:d.c==='B'?7:6);
+    const m=L.circleMarker([d.la,d.lo],{radius:raio,color:COR[d.c],weight:2,
+      fillColor:COR[d.c],fillOpacity:d.g==='cnes_endereco'?.65:.25,
+      dashArray:d.g==='cnes_endereco'?null:'3 3'}).bindPopup(popup(d),{maxWidth:330});
+    marcadores.push(m); cluster.addLayer(m);
+  });
+  document.getElementById('cnt').textContent='('+f.length+')';
+  document.getElementById('k1').textContent=f.length;
+  document.getElementById('k2').textContent=f.filter(d=>d.c==='A'||d.c==='B').length;
+  document.getElementById('k3').textContent=new Set(f.map(d=>d.uf)).size;
+  document.getElementById('k4').textContent=f.filter(d=>d.sis).length;
+  const lista=document.getElementById('list');
+  lista.innerHTML=f.slice(0,300).map((d,i)=>`<div class="item" data-i="${i}">
+    <b>${esc(d.n)}</b><span>${esc(d.mu)} — ${d.uf} · classe ${d.c}${d.emb!=null?' · '+d.emb.toLocaleString('pt-BR')+' embriões':''}</span></div>`).join('');
+  [...lista.children].forEach(el=>el.onclick=()=>{
+    const m=marcadores[+el.dataset.i]; map.setView(m.getLatLng(),15); m.openPopup();
+  });
+}
+
+fetch('data/estabelecimentos.json').then(r=>r.json()).then(j=>{
+  DADOS=j;
+  const ufs=[...new Set(j.map(d=>d.uf))].sort();
+  document.getElementById('uf').insertAdjacentHTML('beforeend',ufs.map(u=>`<option>${u}</option>`).join(''));
+  document.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',desenhar));
+  desenhar();
+});
+</script>
+</body>
+</html>
